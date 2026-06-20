@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#2563eb" />
+  <title>5v5 Jamboree Schedule</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* keep the search dropdown above game cards */
+    body { -webkit-tap-highlight-color: transparent; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" data-presets="react">
+    const { useState, useMemo } = React;
+
+    // Inline icons (replaces lucide-react so this works as a single file)
+    function Icon({ paths, className }) {
+      return (
+        <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {paths}
+        </svg>
+      );
+    }
+    const Search = (p) => <Icon {...p} paths={<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>} />;
+    const MapPin = (p) => <Icon {...p} paths={<><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></>} />;
+    const Clock = (p) => <Icon {...p} paths={<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>} />;
+    const Users = (p) => <Icon {...p} paths={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} />;
+    const Grid3x3 = (p) => <Icon {...p} paths={<><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></>} />;
+    const Calendar = (p) => <Icon {...p} paths={<><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></>} />;
+
+    // Every game from the schedule: [timeSlot, field, teamA, teamB]
+    const GAMES = [
+      ["10:00 AM – 10:45 AM", 3, "RB Thunder Wolves", "Team Messi"],
+      ["10:00 AM – 10:45 AM", 4, "New Zealand", "Hot Shots"],
+      ["10:00 AM – 10:45 AM", 5, "Coyotes", "Team Eusebio"],
+      ["10:00 AM – 10:45 AM", 6, "Ecuador", "Team Klose"],
+      ["10:00 AM – 10:45 AM", 7, "Red Bulls", "Team Cruyff"],
+
+      ["11:00 AM – 11:45 AM", 3, "Los Yaotecatls (10)", "SYSA USA"],
+      ["11:00 AM – 11:45 AM", 4, "Ecuador", "RB Thunder Wolves"],
+      ["11:00 AM – 11:45 AM", 5, "Team Messi", "Red Bulls"],
+      ["11:00 AM – 11:45 AM", 6, "Golden Dragons", "Team Cruyff"],
+      ["11:00 AM – 11:45 AM", 7, "New Zealand", "Team Eusebio"],
+      ["11:00 AM – 11:45 AM", 8, "Hot Shots", "Coyotes"],
+
+      ["12:00 PM – 12:45 PM", 3, "Los Yaotecatls (10)", "RB Thunder Wolves"],
+      ["12:00 PM – 12:45 PM", 4, "Ecuador", "Golden Dragons"],
+      ["12:00 PM – 12:45 PM", 5, "SYSA USA", "Team Messi"],
+      ["12:00 PM – 12:45 PM", 6, "Team Klose", "Team Cruyff"],
+      ["12:00 PM – 12:45 PM", 7, "New Zealand", "Coyotes"],
+      ["12:00 PM – 12:45 PM", 8, "Hot Shots", "Team Eusebio"],
+
+      ["1:00 PM – 1:45 PM", 3, "Los Yaotecatls (11)", "Team Zidane"],
+      ["1:00 PM – 1:45 PM", 4, "Los Yaotecatls (10)", "Team Cruyff"],
+      ["1:00 PM – 1:45 PM", 5, "Bush Blazers", "Team Maradona"],
+      ["1:00 PM – 1:45 PM", 6, "Laser Five Dinosaurs", "Team Beckenbauer"],
+      ["1:00 PM – 1:45 PM", 7, "SYSA USA", "Golden Dragons"],
+      ["1:00 PM – 1:45 PM", 8, "Team Klose", "Red Bulls"],
+
+      ["2:00 PM – 2:45 PM", 3, "Team Zidane", "Team Beckenbauer"],
+      ["2:00 PM – 2:45 PM", 4, "Astros", "Team Pelé"],
+      ["2:00 PM – 2:45 PM", 5, "Loveable Lions", "Lemina Ya Goats"],
+      ["2:00 PM – 2:45 PM", 6, "Sharks", "Herricanes"],
+      ["2:00 PM – 2:45 PM", 7, "Laser Five Dinosaurs", "Team Maradona"],
+      ["2:00 PM – 2:45 PM", 8, "Strikers", "Los Yaotecatls (11)"],
+
+      ["3:00 PM – 3:45 PM", 3, "Strikers", "Team Beckenbauer"],
+      ["3:00 PM – 3:45 PM", 4, "Bush Blazers", "Team Zidane"],
+      ["3:00 PM – 3:45 PM", 5, "Los Yaotecatls (11)", "Laser Five Dinosaurs"],
+      ["3:00 PM – 3:45 PM", 6, "Astros", "Loveable Lions"],
+      ["3:00 PM – 3:45 PM", 7, "Sharks", "Team Pelé"],
+      ["3:00 PM – 3:45 PM", 8, "Lemina Ya Goats", "Herricanes"],
+
+      ["4:00 PM – 4:45 PM", 3, "Strikers", "Bush Blazers"],
+      ["4:00 PM – 4:45 PM", 4, "Team Pelé", "Herricanes"],
+      ["4:00 PM – 4:45 PM", 5, "Team Maradona", "Team Beckenbauer"],
+      ["4:00 PM – 4:45 PM", 6, "Astros", "Lemina Ya Goats"],
+      ["4:00 PM – 4:45 PM", 7, "Loveable Lions", "Sharks"],
+    ];
+
+    const ALL_TEAMS = Array.from(
+      new Set(GAMES.flatMap(([, , a, b]) => [a, b]))
+    ).sort((a, b) => a.localeCompare(b));
+
+    const TIME_ORDER = [
+      "10:00 AM – 10:45 AM",
+      "11:00 AM – 11:45 AM",
+      "12:00 PM – 12:45 PM",
+      "1:00 PM – 1:45 PM",
+      "2:00 PM – 2:45 PM",
+      "3:00 PM – 3:45 PM",
+      "4:00 PM – 4:45 PM",
+    ];
+
+    const FIELDS = [3, 4, 5, 6, 7, 8];
+
+    function Tab({ active, onClick, icon: Icon, label }) {
+      return (
+        <button
+          onClick={onClick}
+          className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
+            active
+              ? "bg-blue-600 text-white shadow-sm"
+              : "text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          <Icon className="h-4 w-4" />
+          {label}
+        </button>
+      );
+    }
+
+    function TeamView() {
+      const [query, setQuery] = useState("");
+      const [selected, setSelected] = useState(null);
+
+      const suggestions = useMemo(() => {
+        if (!query.trim()) return [];
+        const q = query.toLowerCase();
+        return ALL_TEAMS.filter((t) => t.toLowerCase().includes(q)).slice(0, 8);
+      }, [query]);
+
+      const schedule = useMemo(() => {
+        if (!selected) return [];
+        return GAMES
+          .filter(([, , a, b]) => a === selected || b === selected)
+          .map(([time, field, a, b]) => ({
+            time,
+            field,
+            opponent: a === selected ? b : a,
+          }))
+          .sort((x, y) => TIME_ORDER.indexOf(x.time) - TIME_ORDER.indexOf(y.time));
+      }, [selected]);
+
+      const pick = (team) => {
+        setSelected(team);
+        setQuery(team);
+      };
+
+      return (
+        <div>
+          <div className="relative mb-6">
+            <div className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-3 shadow-sm focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100">
+              <Search className="h-5 w-5 shrink-0 text-slate-400" />
+              <input
+                className="w-full bg-transparent text-base outline-none placeholder:text-slate-400"
+                placeholder="Search team name…"
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setSelected(null);
+                }}
+              />
+              {query && (
+                <button
+                  onClick={() => {
+                    setQuery("");
+                    setSelected(null);
+                  }}
+                  className="text-sm text-slate-400 hover:text-slate-600"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {!selected && suggestions.length > 0 && (
+              <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                {suggestions.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => pick(t)}
+                    className="block w-full px-4 py-2.5 text-left text-sm hover:bg-blue-50"
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {!selected && query.trim() && suggestions.length === 0 && (
+              <div className="absolute z-10 mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-lg">
+                No team found
+              </div>
+            )}
+          </div>
+
+          {selected && (
+            <div>
+              <div className="mb-3 flex items-center gap-2">
+                <Users className="h-5 w-5 text-blue-600" />
+                <span className="text-lg font-semibold text-slate-800">
+                  {selected}
+                </span>
+                <span className="ml-auto text-sm text-slate-500">
+                  {schedule.length} game{schedule.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                {schedule.map((g, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+                  >
+                    <div className="flex flex-col items-center justify-center rounded-lg bg-blue-600 px-3 py-2 text-white">
+                      <MapPin className="h-4 w-4" />
+                      <span className="mt-0.5 text-xs font-bold">F{g.field}</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 text-sm font-medium text-slate-800">
+                        <Clock className="h-3.5 w-3.5 text-slate-400" />
+                        {g.time}
+                      </div>
+                      <div className="mt-0.5 text-sm text-slate-600">
+                        vs <span className="font-semibold">{g.opponent}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!selected && !query.trim() && (
+            <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-400">
+              Start typing to see a team's full day
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function FieldView() {
+      const [field, setField] = useState(3);
+      const games = GAMES
+        .filter(([, f]) => f === field)
+        .sort((a, b) => TIME_ORDER.indexOf(a[0]) - TIME_ORDER.indexOf(b[0]));
+
+      return (
+        <div>
+          <div className="mb-5 flex flex-wrap gap-2">
+            {FIELDS.map((f) => (
+              <button
+                key={f}
+                onClick={() => setField(f)}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                  field === f
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                Field {f}
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-2">
+            {games.map(([time, , a, b], i) => (
+              <div
+                key={i}
+                className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+              >
+                <div className="flex w-24 shrink-0 items-center gap-1.5 text-sm font-medium text-slate-800">
+                  <Clock className="h-3.5 w-3.5 text-slate-400" />
+                  {time.split(" – ")[0]}
+                </div>
+                <div className="text-sm text-slate-700">
+                  <span className="font-semibold">{a}</span>
+                  <span className="mx-1.5 text-slate-400">vs</span>
+                  <span className="font-semibold">{b}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function TimeView() {
+      const [slot, setSlot] = useState(TIME_ORDER[0]);
+      const games = GAMES
+        .filter(([t]) => t === slot)
+        .sort((a, b) => a[1] - b[1]);
+
+      return (
+        <div>
+          <div className="mb-5 flex flex-wrap gap-2">
+            {TIME_ORDER.map((t) => (
+              <button
+                key={t}
+                onClick={() => setSlot(t)}
+                className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                  slot === t
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                {t.split(" – ")[0]}
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-2">
+            {games.map(([, field, a, b], i) => (
+              <div
+                key={i}
+                className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+              >
+                <div className="flex flex-col items-center justify-center rounded-lg bg-blue-600 px-3 py-2 text-white">
+                  <MapPin className="h-4 w-4" />
+                  <span className="mt-0.5 text-xs font-bold">F{field}</span>
+                </div>
+                <div className="text-sm text-slate-700">
+                  <span className="font-semibold">{a}</span>
+                  <span className="mx-1.5 text-slate-400">vs</span>
+                  <span className="font-semibold">{b}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function App() {
+      const [view, setView] = useState("team");
+
+      return (
+        <div className="min-h-screen bg-slate-50 p-4 sm:p-6">
+          <div className="max-w-xl mx-auto">
+            <div className="mb-1 text-2xl font-bold text-slate-800">
+              5v5 Jamboree Schedule
+            </div>
+            <div className="mb-5 text-sm text-slate-500">
+              Magnuson Park · June 20
+            </div>
+
+            <div className="mb-6 flex gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+              <Tab active={view === "team"} onClick={() => setView("team")} icon={Users} label="By Team" />
+              <Tab active={view === "field"} onClick={() => setView("field")} icon={Grid3x3} label="By Field" />
+              <Tab active={view === "time"} onClick={() => setView("time")} icon={Calendar} label="By Time" />
+            </div>
+
+            {view === "team" && <TeamView />}
+            {view === "field" && <FieldView />}
+            {view === "time" && <TimeView />}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
